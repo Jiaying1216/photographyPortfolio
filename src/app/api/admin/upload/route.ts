@@ -1,33 +1,38 @@
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
 import { NextRequest, NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
 
-function verifyToken(req: NextRequest): boolean {
-  const adminPassword = process.env.ADMIN_PASSWORD
-  if (!adminPassword) return false
-  const expected = Buffer.from(adminPassword + ':ying-admin').toString('base64')
-  return req.headers.get('x-admin-token') === expected
+function isValidToken(token: string | null): boolean {
+  if (!token || !process.env.ADMIN_PASSWORD) return false
+  const expected = Buffer.from(process.env.ADMIN_PASSWORD + ':ying-admin').toString('base64')
+  return token === expected
 }
 
-export async function POST(req: NextRequest) {
-  if (!verifyToken(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  const body = (await req.json()) as HandleUploadBody
+
+  try {
+    const jsonResponse = await handleUpload({
+      body,
+      request: req,
+      // Called before Vercel generates an upload token for the client.
+      // clientPayload is the admin token we pass from the browser.
+      onBeforeGenerateToken: async (_pathname, clientPayload) => {
+        if (!isValidToken(clientPayload ?? null)) {
+          throw new Error('Unauthorized')
+        }
+        return {
+          access: 'private' as const,
+          addRandomSuffix: false,
+        }
+      },
+      onUploadCompleted: async ({ blob }) => {
+        // Vercel calls this webhook after the upload lands.
+        // Used for server-side post-processing if needed.
+        console.log('Blob upload completed:', blob.pathname)
+      },
+    })
+    return NextResponse.json(jsonResponse)
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 400 })
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return NextResponse.json({ error: 'BLOB_READ_WRITE_TOKEN not configured.' }, { status: 500 })
-  }
-
-  const form = await req.formData()
-  const file = form.get('file') as File
-  if (!file) return NextResponse.json({ error: 'No file provided.' }, { status: 400 })
-
-  const ext = file.name.split('.').pop() ?? 'jpg'
-  const filename = `ying-portfolio/photos/${Date.now()}.${ext}`
-
-  const blob = await put(filename, file, {
-    access: 'private',
-    contentType: file.type || 'image/jpeg',
-  })
-
-  // Return the full blob URL so we can proxy it without reconstructing
-  return NextResponse.json({ url: blob.url })
 }

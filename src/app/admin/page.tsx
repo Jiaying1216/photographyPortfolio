@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { upload } from '@vercel/blob/client'
 import type { Photo } from '@/types'
 import { photoSrc } from '@/lib/utils'
 
@@ -100,54 +101,52 @@ function UploadForm({ token, onUploaded }: { token: string; onUploaded: () => vo
     e.preventDefault()
     if (!file) return
     setUploading(true)
-    setStatus('Uploading image…')
 
-    // 1. Upload image to Blob
-    const form = new FormData()
-    form.append('file', file)
-    const upRes = await fetch('/api/admin/upload', {
-      method: 'POST',
-      headers: { 'x-admin-token': token },
-      body: form,
-    })
-    if (!upRes.ok) {
-      const err = await upRes.json()
-      setStatus(`Error: ${err.error}`)
+    try {
+      // 1. Upload directly from browser to Vercel Blob (no 4MB server limit)
+      setStatus('Uploading image…')
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const filename = `ying-portfolio/photos/${Date.now()}.${ext}`
+      const blob = await upload(filename, file, {
+        access: 'private',
+        handleUploadUrl: '/api/admin/upload',
+        clientPayload: token, // admin token verified server-side
+      })
+
+      // 2. Save metadata
+      setStatus('Saving metadata…')
+      const newPhoto: Photo = {
+        id: Date.now().toString(),
+        src: blob.url,
+        alt: `${meta.title} — ${meta.location}`,
+        category: meta.category,
+        location: meta.location,
+        title: meta.title,
+        year: meta.year,
+        aspectRatio: meta.aspectRatio,
+      }
+      const metaRes = await fetch('/api/admin/photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ action: 'add', photo: newPhoto }),
+      })
+      if (!metaRes.ok) {
+        const err = await metaRes.json()
+        setStatus(`Error saving metadata: ${err.error}`)
+        setUploading(false)
+        return
+      }
+
+      setStatus('Done! Photo added.')
+      setFile(null)
+      setPreview(null)
+      setMeta({ title: '', location: '', category: 'travel', year: new Date().getFullYear(), aspectRatio: '3/4' })
+      onUploaded()
+    } catch (err) {
+      setStatus(`Error: ${err instanceof Error ? err.message : 'Upload failed'}`)
+    } finally {
       setUploading(false)
-      return
     }
-    const { url } = await upRes.json()
-
-    // 2. Save metadata
-    setStatus('Saving metadata…')
-    const newPhoto: Photo = {
-      id: Date.now().toString(),
-      src: url,
-      alt: `${meta.title} — ${meta.location}`,
-      category: meta.category,
-      location: meta.location,
-      title: meta.title,
-      year: meta.year,
-      aspectRatio: meta.aspectRatio,
-    }
-    const metaRes = await fetch('/api/admin/photos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-      body: JSON.stringify({ action: 'add', photo: newPhoto }),
-    })
-    if (!metaRes.ok) {
-      const err = await metaRes.json()
-      setStatus(`Error: ${err.error}`)
-      setUploading(false)
-      return
-    }
-
-    setStatus('Done! Photo added.')
-    setFile(null)
-    setPreview(null)
-    setMeta({ title: '', location: '', category: 'travel', year: new Date().getFullYear(), aspectRatio: '3/4' })
-    setUploading(false)
-    onUploaded()
   }
 
   const inputStyle: React.CSSProperties = {
