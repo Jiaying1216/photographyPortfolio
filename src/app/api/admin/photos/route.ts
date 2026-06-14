@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPhotosFromBlob, savePhotosToBlob, isBlobConfigured } from '@/lib/blob-photos'
 import { photos as staticPhotos } from '@/data/photos'
+import type { Photo } from '@/types'
 
 function verifyToken(req: NextRequest): boolean {
   const adminPassword = process.env.ADMIN_PASSWORD
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'BLOB_READ_WRITE_TOKEN not configured.' }, { status: 500 })
   }
 
-  const { action, photo, photoId } = await req.json()
+  const { action, photo, photoId, photos: reorderedPhotos } = await req.json()
 
   const current = await getPhotosFromBlob()
 
@@ -46,6 +47,11 @@ export async function POST(req: NextRequest) {
       p.id === photoId ? { ...p, filmRoll: !p.filmRoll } : p
     )
     await savePhotosToBlob(updated)
+    return NextResponse.json({ ok: true })
+  }
+
+  if (action === 'reorder') {
+    await savePhotosToBlob(reorderedPhotos as Photo[])
     return NextResponse.json({ ok: true })
   }
 

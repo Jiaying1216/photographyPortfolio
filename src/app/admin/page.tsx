@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { Reorder, useDragControls } from 'framer-motion'
 import { upload } from '@vercel/blob/client'
 import type { Photo } from '@/types'
 import { photoSrc } from '@/lib/utils'
@@ -276,31 +277,134 @@ function Label({ children }: { children: React.ReactNode }) {
   )
 }
 
+// ── Single draggable photo row ──────────────────────────────────────────────
+function PhotoRow({
+  photo, token, onDelete, onToggle,
+}: {
+  photo: Photo
+  token: string
+  onDelete: (id: string) => Promise<void>
+  onToggle: (id: string) => Promise<void>
+}) {
+  const dragControls = useDragControls()
+  const [deleting, setDeleting] = useState(false)
+  const [toggling, setToggling] = useState(false)
+
+  return (
+    <Reorder.Item
+      value={photo}
+      id={photo.id}
+      dragControls={dragControls}
+      dragListener={false}
+      style={{ listStyle: 'none' }}
+    >
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        padding: '12px 16px', backgroundColor: '#faf7f2',
+        border: '1px solid rgba(201,180,154,0.3)', borderRadius: '2px',
+        userSelect: 'none',
+      }}>
+        {/* Drag handle */}
+        <div
+          onPointerDown={e => dragControls.start(e)}
+          style={{ cursor: 'grab', color: '#c9b49a', flexShrink: 0, touchAction: 'none', fontSize: '18px', lineHeight: 1, paddingBottom: '2px' }}
+          title="Drag to reorder"
+        >
+          ⠿
+        </div>
+
+        {/* Thumbnail */}
+        <div style={{
+          width: 52, height: 52, flexShrink: 0, borderRadius: '2px', overflow: 'hidden',
+          background: 'linear-gradient(135deg, #c9b49a, #7a5c44)', position: 'relative',
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photoSrc(photo.src)}
+            alt={photo.alt}
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </div>
+
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="font-lora" style={{ color: '#3d2b1f', fontSize: '14px', fontWeight: 500 }}>{photo.title}</p>
+          <p className="font-dm-mono" style={{ color: '#9c5a3c', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            {photo.location} · {photo.year} · {photo.category}
+          </p>
+        </div>
+
+        {/* Film roll toggle */}
+        <button
+          onClick={async () => { setToggling(true); await onToggle(photo.id); setToggling(false) }}
+          disabled={toggling}
+          title={photo.filmRoll ? 'Remove from Film Roll' : 'Add to Film Roll'}
+          className="font-dm-mono"
+          style={{
+            padding: '6px 10px', fontSize: '14px', letterSpacing: 0, border: '1px solid',
+            borderColor: photo.filmRoll ? '#9c5a3c' : 'rgba(201,180,154,0.4)',
+            backgroundColor: photo.filmRoll ? 'rgba(156,90,60,0.15)' : 'transparent',
+            color: photo.filmRoll ? '#9c5a3c' : '#c9b49a',
+            cursor: 'pointer', opacity: toggling ? 0.5 : 1, borderRadius: '2px', flexShrink: 0,
+          }}>
+          {toggling ? '…' : '🎞'}
+        </button>
+
+        {/* Delete */}
+        <button
+          onClick={async () => { setDeleting(true); await onDelete(photo.id); setDeleting(false) }}
+          disabled={deleting}
+          className="font-dm-mono"
+          style={{
+            padding: '6px 12px', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase',
+            border: '1px solid rgba(156,90,60,0.4)', backgroundColor: 'transparent',
+            color: '#9c5a3c', cursor: 'pointer', opacity: deleting ? 0.5 : 1, borderRadius: '2px', flexShrink: 0,
+          }}>
+          {deleting ? '…' : 'Remove'}
+        </button>
+      </div>
+    </Reorder.Item>
+  )
+}
+
 // ── Photo list ─────────────────────────────────────────────────────────────
 function PhotoList({ photos, token, onDeleted }: { photos: Photo[]; token: string; onDeleted: () => void }) {
-  const [deleting, setDeleting] = useState<string | null>(null)
-  const [toggling, setToggling] = useState<string | null>(null)
+  const [items, setItems] = useState<Photo[]>(photos)
+  const [saving, setSaving] = useState(false)
 
-  const deletePhoto = async (id: string) => {
+  // Sync local order when photos are added/deleted from outside
+  useEffect(() => { setItems(photos) }, [photos])
+
+  const isDirty = items.map(p => p.id).join() !== photos.map(p => p.id).join()
+
+  const saveOrder = async () => {
+    setSaving(true)
+    await fetch('/api/admin/photos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+      body: JSON.stringify({ action: 'reorder', photos: items }),
+    })
+    setSaving(false)
+    onDeleted()
+  }
+
+  const handleDelete = async (id: string) => {
     if (!confirm('Remove this photo from the portfolio?')) return
-    setDeleting(id)
     await fetch('/api/admin/photos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
       body: JSON.stringify({ action: 'delete', photoId: id }),
     })
-    setDeleting(null)
     onDeleted()
   }
 
-  const toggleFilmRoll = async (id: string) => {
-    setToggling(id)
+  const handleToggleFilmRoll = async (id: string) => {
     await fetch('/api/admin/photos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
       body: JSON.stringify({ action: 'toggle-film-roll', photoId: id }),
     })
-    setToggling(null)
     onDeleted()
   }
 
@@ -313,62 +417,41 @@ function PhotoList({ photos, token, onDeleted }: { photos: Photo[]; token: strin
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {photos.map(photo => (
-        <div key={photo.id} style={{
-          display: 'flex', alignItems: 'center', gap: '16px',
-          padding: '12px 16px', backgroundColor: '#faf7f2',
-          border: '1px solid rgba(201,180,154,0.3)', borderRadius: '2px',
-        }}>
-          <div style={{
-            width: 52, height: 52, flexShrink: 0, borderRadius: '2px', overflow: 'hidden',
-            background: 'linear-gradient(135deg, #c9b49a, #7a5c44)',
-            position: 'relative',
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={photoSrc(photo.src)}
-              alt={photo.alt}
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-lora" style={{ color: '#3d2b1f', fontSize: '14px', fontWeight: 500 }}>{photo.title}</p>
-            <p className="font-dm-mono" style={{ color: '#9c5a3c', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              {photo.location} · {photo.year} · {photo.category}
-            </p>
-          </div>
+    <div>
+      {isDirty && (
+        <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
-            onClick={() => toggleFilmRoll(photo.id)}
-            disabled={toggling === photo.id}
-            title={photo.filmRoll ? 'Remove from Film Roll' : 'Add to Film Roll'}
+            onClick={saveOrder}
+            disabled={saving}
             className="font-dm-mono"
             style={{
-              padding: '6px 10px', fontSize: '14px', letterSpacing: 0,
-              border: '1px solid',
-              borderColor: photo.filmRoll ? '#9c5a3c' : 'rgba(201,180,154,0.4)',
-              backgroundColor: photo.filmRoll ? 'rgba(156,90,60,0.15)' : 'transparent',
-              color: photo.filmRoll ? '#9c5a3c' : '#c9b49a',
-              cursor: 'pointer',
-              opacity: toggling === photo.id ? 0.5 : 1, borderRadius: '2px',
+              padding: '8px 20px', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase',
+              backgroundColor: '#3d2b1f', color: '#f5f0e8', border: 'none',
+              cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.6 : 1, borderRadius: '2px',
             }}>
-            {toggling === photo.id ? '…' : '🎞'}
+            {saving ? 'Saving…' : 'Save Order'}
           </button>
-          <button
-            onClick={() => deletePhoto(photo.id)}
-            disabled={deleting === photo.id}
-            className="font-dm-mono"
-            style={{
-              padding: '6px 12px', fontSize: '10px', letterSpacing: '0.1em',
-              textTransform: 'uppercase', border: '1px solid rgba(156,90,60,0.4)',
-              backgroundColor: 'transparent', color: '#9c5a3c', cursor: 'pointer',
-              opacity: deleting === photo.id ? 0.5 : 1, borderRadius: '2px',
-            }}>
-            {deleting === photo.id ? '…' : 'Remove'}
-          </button>
+          <p className="font-dm-mono" style={{ color: '#9c5a3c', fontSize: '10px', letterSpacing: '0.08em' }}>
+            Order changed — click to save
+          </p>
         </div>
-      ))}
+      )}
+      <Reorder.Group
+        axis="y"
+        values={items}
+        onReorder={setItems}
+        style={{ padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}
+      >
+        {items.map(photo => (
+          <PhotoRow
+            key={photo.id}
+            photo={photo}
+            token={token}
+            onDelete={handleDelete}
+            onToggle={handleToggleFilmRoll}
+          />
+        ))}
+      </Reorder.Group>
     </div>
   )
 }
