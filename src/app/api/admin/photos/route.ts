@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { getPhotosFromBlob, savePhotosToBlob, isBlobConfigured } from '@/lib/blob-photos'
 import { photos as staticPhotos } from '@/data/photos'
 import type { Photo } from '@/types'
@@ -32,31 +33,37 @@ export async function POST(req: NextRequest) {
 
     if (action === 'add') {
       await savePhotosToBlob([photo, ...current])
+      revalidatePath('/')
       return NextResponse.json({ ok: true })
     }
 
     if (action === 'add-multiple') {
       await savePhotosToBlob([...(reorderedPhotos as Photo[]), ...current])
+      revalidatePath('/')
       return NextResponse.json({ ok: true })
     }
 
     if (action === 'delete') {
       await savePhotosToBlob(current.filter(p => p.id !== photoId))
+      revalidatePath('/')
       return NextResponse.json({ ok: true })
     }
 
     if (action === 'toggle-film-roll') {
       await savePhotosToBlob(current.map(p => p.id === photoId ? { ...p, filmRoll: !p.filmRoll } : p))
+      revalidatePath('/')
       return NextResponse.json({ ok: true })
     }
 
     if (action === 'update') {
       await savePhotosToBlob(current.map(p => p.id === photo.id ? { ...p, ...photo } : p))
+      revalidatePath('/')
       return NextResponse.json({ ok: true })
     }
 
     if (action === 'reorder') {
       await savePhotosToBlob(reorderedPhotos as Photo[])
+      revalidatePath('/')
       return NextResponse.json({ ok: true })
     }
 
