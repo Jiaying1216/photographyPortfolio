@@ -103,8 +103,8 @@ function PasswordGate({ onAuth }: { onAuth: (token: string) => void }) {
 
 // ── Upload form ────────────────────────────────────────────────────────────
 function UploadForm({ token, onUploaded }: { token: string; onUploaded: () => void }) {
-  const [file, setFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<string | null>(null)
+  const [files, setFiles] = useState<File[]>([])
+  const [previews, setPreviews] = useState<string[]>([])
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [status, setStatus] = useState('')
@@ -115,73 +115,90 @@ function UploadForm({ token, onUploaded }: { token: string; onUploaded: () => vo
     year: new Date().getFullYear(), aspectRatio: '3/4' as Photo['aspectRatio'],
   })
 
-  const pickFile = (f: File) => {
-    setFile(f)
-    setPreview(URL.createObjectURL(f))
+  const pickFiles = useCallback((picked: File[]) => {
+    const images = picked.filter(f => f.type.startsWith('image/'))
+    if (images.length === 0) return
+    setPreviews(prev => {
+      prev.forEach(URL.revokeObjectURL)
+      return images.map(f => URL.createObjectURL(f))
+    })
+    setFiles(images)
+    setStatus('')
+  }, [])
+
+  const removeFile = (i: number) => {
+    URL.revokeObjectURL(previews[i])
+    setFiles(fs => fs.filter((_, idx) => idx !== i))
+    setPreviews(ps => ps.filter((_, idx) => idx !== i))
   }
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragging(false)
-    const f = e.dataTransfer.files[0]
-    if (f && f.type.startsWith('image/')) pickFile(f)
-  }, [])
+    pickFiles(Array.from(e.dataTransfer.files))
+  }, [pickFiles])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file) return
+    if (files.length === 0) return
     setUploading(true)
 
-    try {
-      // 1. Compress in-browser before uploading
-      setStatus('Compressing image…')
-      const compressed = await compressImage(file)
-      const originalMB = (file.size / 1024 / 1024).toFixed(1)
-      const compressedKB = Math.round(compressed.size / 1024)
-      setStatus(`Uploading… (${originalMB} MB → ${compressedKB} KB)`)
+    let uploaded = 0
+    const errors: string[] = []
 
-      // 2. Upload directly from browser to Vercel Blob (no size limit)
-      const filename = `ying-portfolio/photos/${Date.now()}.jpg`
-      const blob = await upload(filename, compressed, {
-        access: 'private',
-        handleUploadUrl: '/api/admin/upload',
-        clientPayload: token, // admin token verified server-side
-      })
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      try {
+        setStatus(`Compressing ${i + 1}/${files.length}…`)
+        const compressed = await compressImage(file)
+        const kb = Math.round(compressed.size / 1024)
+        setStatus(`Uploading ${i + 1}/${files.length} (${kb} KB)…`)
 
-      // 2. Save metadata
-      setStatus('Saving metadata…')
-      const newPhoto: Photo = {
-        id: Date.now().toString(),
-        src: blob.url,
-        alt: `${meta.title} — ${meta.location}`,
-        category: meta.category,
-        location: meta.location,
-        title: meta.title,
-        year: meta.year,
-        aspectRatio: meta.aspectRatio,
+        const filename = `ying-portfolio/photos/${Date.now()}-${i}.jpg`
+        const blob = await upload(filename, compressed, {
+          access: 'private',
+          handleUploadUrl: '/api/admin/upload',
+          clientPayload: token,
+        })
+
+        const title = files.length > 1 ? `${meta.title} ${i + 1}` : meta.title
+        const newPhoto: Photo = {
+          id: `${Date.now()}-${i}`,
+          src: blob.url,
+          alt: `${title} — ${meta.location}`,
+          category: meta.category,
+          location: meta.location,
+          title,
+          year: meta.year,
+          aspectRatio: meta.aspectRatio,
+        }
+        const metaRes = await fetch('/api/admin/photos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+          body: JSON.stringify({ action: 'add', photo: newPhoto }),
+        })
+        if (!metaRes.ok) {
+          const err = await metaRes.json()
+          errors.push(`Photo ${i + 1}: ${err.error}`)
+        } else {
+          uploaded++
+        }
+      } catch (err) {
+        errors.push(`Photo ${i + 1}: ${err instanceof Error ? err.message : 'failed'}`)
       }
-      const metaRes = await fetch('/api/admin/photos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify({ action: 'add', photo: newPhoto }),
-      })
-      if (!metaRes.ok) {
-        const err = await metaRes.json()
-        setStatus(`Error saving metadata: ${err.error}`)
-        setUploading(false)
-        return
-      }
-
-      setStatus('Done! Photo added.')
-      setFile(null)
-      setPreview(null)
-      setMeta({ title: '', location: '', category: 'travel', year: new Date().getFullYear(), aspectRatio: '3/4' })
-      onUploaded()
-    } catch (err) {
-      setStatus(`Error: ${err instanceof Error ? err.message : 'Upload failed'}`)
-    } finally {
-      setUploading(false)
     }
+
+    if (errors.length > 0) {
+      setStatus(`Done with errors: ${errors.join(' · ')}`)
+    } else {
+      setStatus(`Done! ${uploaded} photo${uploaded > 1 ? 's' : ''} added.`)
+      previews.forEach(URL.revokeObjectURL)
+      setFiles([])
+      setPreviews([])
+      setMeta({ title: '', location: '', category: 'travel', year: new Date().getFullYear(), aspectRatio: '3/4' })
+    }
+    setUploading(false)
+    onUploaded()
   }
 
   const inputStyle: React.CSSProperties = {
@@ -202,28 +219,46 @@ function UploadForm({ token, onUploaded }: { token: string; onUploaded: () => vo
         style={{
           border: `2px dashed ${dragging ? '#9c5a3c' : 'rgba(201,180,154,0.5)'}`,
           borderRadius: '4px',
-          padding: '40px',
+          padding: previews.length > 0 ? '16px' : '40px',
           textAlign: 'center',
           cursor: 'pointer',
           marginBottom: '24px',
           backgroundColor: dragging ? 'rgba(156,90,60,0.05)' : 'transparent',
           transition: 'all 0.2s',
-          position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
-          onChange={e => { const f = e.target.files?.[0]; if (f) pickFile(f) }}
+        <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
+          onChange={e => pickFiles(Array.from(e.target.files ?? []))}
         />
-        {preview ? (
-          <img src={preview} alt="preview" style={{ maxHeight: 200, maxWidth: '100%', objectFit: 'contain', borderRadius: '2px' }} />
+        {previews.length > 0 ? (
+          <div>
+            {/* Thumbnail grid */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
+              {previews.map((src, i) => (
+                <div key={i} style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}
+                  onClick={ev => ev.stopPropagation()}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '2px', display: 'block' }} />
+                  <button type="button" onClick={() => removeFile(i)} style={{
+                    position: 'absolute', top: 2, right: 2, width: 18, height: 18,
+                    background: 'rgba(61,43,31,0.85)', color: '#f5f0e8', border: 'none',
+                    borderRadius: '50%', fontSize: '10px', cursor: 'pointer', lineHeight: '18px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                  }}>✕</button>
+                </div>
+              ))}
+            </div>
+            <p className="font-dm-mono" style={{ color: '#9c5a3c', fontSize: '11px', letterSpacing: '0.1em' }}>
+              {files.length} photo{files.length > 1 ? 's' : ''} selected · click to change
+            </p>
+          </div>
         ) : (
           <>
             <p className="font-playfair" style={{ color: '#7a5c44', fontSize: '18px', fontStyle: 'italic', marginBottom: '8px' }}>
-              Drop photo here
+              Drop photos here
             </p>
             <p className="font-dm-mono" style={{ color: '#c9b49a', fontSize: '11px', letterSpacing: '0.1em' }}>
-              or click to browse
+              or click to browse · select multiple at once
             </p>
           </>
         )}
@@ -285,16 +320,16 @@ function UploadForm({ token, onUploaded }: { token: string; onUploaded: () => vo
 
       <button
         type="submit"
-        disabled={!file || uploading}
+        disabled={files.length === 0 || uploading}
         className="font-dm-mono"
         style={{
           width: '100%', padding: '14px', backgroundColor: '#3d2b1f',
           color: '#f5f0e8', border: 'none', fontSize: '11px',
           letterSpacing: '0.14em', textTransform: 'uppercase',
-          cursor: file && !uploading ? 'pointer' : 'not-allowed',
-          opacity: !file || uploading ? 0.5 : 1, borderRadius: '2px',
+          cursor: files.length > 0 && !uploading ? 'pointer' : 'not-allowed',
+          opacity: files.length === 0 || uploading ? 0.5 : 1, borderRadius: '2px',
         }}>
-        {uploading ? 'Uploading…' : 'Add to Portfolio'}
+        {uploading ? status : files.length > 1 ? `Add ${files.length} Photos to Portfolio` : 'Add to Portfolio'}
       </button>
     </form>
   )
