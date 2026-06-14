@@ -28,16 +28,17 @@ export async function getPhotosFromBlob(): Promise<Photo[]> {
 
 export async function savePhotosToBlob(photos: Photo[]): Promise<void> {
   const { put, del, list } = await import('@vercel/blob')
-  // Snapshot old blobs BEFORE writing so there is always a valid blob in the store.
+  // Snapshot old blob URLs before writing so we know what to clean up.
   const { blobs: old } = await list({ prefix: METADATA_PATHNAME })
-  // Write new blob first — readers can always find a valid metadata file.
+  // Write new blob first — there is always a valid metadata file in the store.
   await put(METADATA_PATHNAME, JSON.stringify(photos, null, 2), {
     access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
   })
-  // Delete old blobs only after new one is safely written.
+  // Delete stale blobs after the new one is safely written.
+  // allSettled: a failed delete is non-fatal — stale blobs are just dead weight.
   if (old.length > 0) {
-    await Promise.all(old.map(b => del(b.url)))
+    await Promise.allSettled(old.map(b => del(b.url)))
   }
 }
