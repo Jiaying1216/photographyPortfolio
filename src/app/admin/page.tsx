@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Photo } from '@/types'
+import { photoSrc } from '@/lib/utils'
 
 const CATEGORIES = ['travel', 'portrait', 'nature', 'street'] as const
 const ASPECT_RATIOS = ['3/4', '4/3', '2/3', '1/1'] as const
@@ -311,11 +312,15 @@ function PhotoList({ photos, token, onDeleted }: { photos: Photo[]; token: strin
           <div style={{
             width: 52, height: 52, flexShrink: 0, borderRadius: '2px', overflow: 'hidden',
             background: 'linear-gradient(135deg, #c9b49a, #7a5c44)',
+            position: 'relative',
           }}>
-            {photo.src.startsWith('http') && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photo.src} alt={photo.alt} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photoSrc(photo.src)}
+              alt={photo.alt}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p className="font-lora" style={{ color: '#3d2b1f', fontSize: '14px', fontWeight: 500 }}>{photo.title}</p>
@@ -343,9 +348,7 @@ function PhotoList({ photos, token, onDeleted }: { photos: Photo[]; token: strin
 
 // ── Main admin page ────────────────────────────────────────────────────────
 export default function AdminPage() {
-  const [token, setToken] = useState<string | null>(() =>
-    typeof window !== 'undefined' ? sessionStorage.getItem('admin-token') : null
-  )
+  const [token, setToken] = useState<string | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loadingPhotos, setLoadingPhotos] = useState(false)
 
@@ -355,6 +358,15 @@ export default function AdminPage() {
     if (res.ok) setPhotos(await res.json())
     setLoadingPhotos(false)
   }, [])
+
+  // Read sessionStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    const stored = sessionStorage.getItem('admin-token')
+    if (stored) {
+      setToken(stored)
+      loadPhotos(stored)
+    }
+  }, [loadPhotos])
 
   const handleAuth = (tok: string) => {
     setToken(tok)

@@ -24,9 +24,10 @@ export async function POST(req: NextRequest) {
   const filename = `ying-portfolio/photos/${Date.now()}.${ext}`
 
   const blob = await put(filename, file, {
-    access: 'public',
+    access: 'private',
     contentType: file.type || 'image/jpeg',
   })
 
+  // Return the full blob URL so we can proxy it without reconstructing
   return NextResponse.json({ url: blob.url })
 }

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { photos } from '@/data/photos'
-import { warmGradient } from '@/lib/utils'
+import { warmGradient, photoSrc } from '@/lib/utils'
 
 export default function FilmStrip() {
   const trackRef = useRef<HTMLDivElement>(null)
@@ -105,9 +105,18 @@ export default function FilmStrip() {
               position: 'relative',
               background: warmGradient(i),
               border: '2px solid #2a1e15',
+              overflow: 'hidden',
             }}
           >
-            <div style={{ paddingTop: '120%' }} />
+            <div style={{ paddingTop: '120%', position: 'relative' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photoSrc(photo.src)}
+                alt={photo.alt}
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
             {/* Frame number */}
             <div
               className="font-dm-mono"

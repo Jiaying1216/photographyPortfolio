@@ -11,18 +11,27 @@ export async function getPhotosFromBlob(): Promise<Photo[]> {
     const { list } = await import('@vercel/blob')
     const { blobs } = await list({ prefix: METADATA_PATHNAME })
     if (blobs.length === 0) return []
-    const res = await fetch(blobs[0].url, { cache: 'no-store' })
+    const metaBlob = blobs.sort(
+      (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+    )[0]
+    const res = await fetch(metaBlob.url, {
+      cache: 'no-store',
+      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+    })
     if (!res.ok) return []
     return await res.json()
-  } catch {
+  } catch (e) {
+    console.error('getPhotosFromBlob error:', e)
     return []
   }
 }
 
 export async function savePhotosToBlob(photos: Photo[]): Promise<void> {
-  const { put } = await import('@vercel/blob')
+  const { put, del, list } = await import('@vercel/blob')
+  const { blobs } = await list({ prefix: METADATA_PATHNAME })
+  await Promise.all(blobs.map(b => del(b.url)))
   await put(METADATA_PATHNAME, JSON.stringify(photos, null, 2), {
-    access: 'public',
+    access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
   })

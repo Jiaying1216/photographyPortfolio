@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import type { Photo } from '@/types'
-import { warmGradient } from '@/lib/utils'
+import { warmGradient, photoSrc } from '@/lib/utils'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import Marquee from '@/components/ui/Marquee'
 
@@ -103,6 +103,22 @@ function GalleryCard({ photo, index, onClick }: { photo: Photo; index: number; o
             borderRadius: '2px',
           }}
         >
+          {/* Real photo */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photoSrc(photo.src)}
+            alt={photo.alt}
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+
           {/* Hover overlay */}
           <motion.div
             animate={{ opacity: hovered ? 1 : 0 }}
@@ -198,8 +214,25 @@ function Lightbox({
             height: 'min(400px, 60vh)',
             margin: '0 auto',
             borderRadius: '2px',
+            position: 'relative',
+            overflow: 'hidden',
           }}
-        />
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photoSrc(photo.src)}
+            alt={photo.alt}
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              display: 'block',
+            }}
+          />
+        </div>
         <p className="font-playfair" style={{ color: '#f5f0e8', fontSize: '18px', fontStyle: 'italic', marginTop: '20px' }}>
           {photo.title}
         </p>
