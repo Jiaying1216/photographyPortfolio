@@ -5,7 +5,7 @@ import { upload } from '@vercel/blob/client'
 import type { Photo } from '@/types'
 import { photoSrc } from '@/lib/utils'
 
-const CATEGORIES = ['travel', 'portrait', 'nature', 'street'] as const
+const CATEGORIES = ['travel', 'portrait', 'nature', 'street', 'pet', 'food', 'family', 'graduation'] as const
 const ASPECT_RATIOS = ['3/4', '4/3', '2/3', '1/1'] as const
 
 // ── Password gate ──────────────────────────────────────────────────────────

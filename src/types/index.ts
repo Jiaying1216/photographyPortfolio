@@ -2,7 +2,7 @@ export type Photo = {
   id: string
   src: string
   alt: string
-  category: 'travel' | 'portrait' | 'nature' | 'street'
+  category: 'travel' | 'portrait' | 'nature' | 'street' | 'pet' | 'food' | 'family' | 'graduation'
   location: string
   title: string
   year: number

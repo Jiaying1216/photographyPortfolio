@@ -9,11 +9,15 @@ import Marquee from '@/components/ui/Marquee'
 
 type Filter = 'all' | Photo['category']
 const FILTERS: { label: string; value: Filter }[] = [
-  { label: 'All',      value: 'all' },
-  { label: 'Travel',   value: 'travel' },
-  { label: 'Portrait', value: 'portrait' },
-  { label: 'Nature',   value: 'nature' },
-  { label: 'Street',   value: 'street' },
+  { label: 'All',        value: 'all' },
+  { label: 'Travel',     value: 'travel' },
+  { label: 'Portrait',   value: 'portrait' },
+  { label: 'Nature',     value: 'nature' },
+  { label: 'Street',     value: 'street' },
+  { label: 'Pet',        value: 'pet' },
+  { label: 'Food',       value: 'food' },
+  { label: 'Family',     value: 'family' },
+  { label: 'Graduation', value: 'graduation' },
 ]
 
 function GalleryCard({ photo, index, onClick }: { photo: Photo; index: number; onClick: () => void }) {
