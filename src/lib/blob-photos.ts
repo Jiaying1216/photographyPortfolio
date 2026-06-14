@@ -35,6 +35,7 @@ export async function savePhotosToBlob(photos: Photo[]): Promise<void> {
     access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
+    allowOverwrite: true,
   })
   // Delete stale blobs after the new one is safely written.
   // allSettled: a failed delete is non-fatal — stale blobs are just dead weight.
