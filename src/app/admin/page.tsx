@@ -143,14 +143,14 @@ function UploadForm({ token, onUploaded }: { token: string; onUploaded: () => vo
     if (files.length === 0) return
     setUploading(true)
 
-    let uploaded = 0
+    const newPhotos: Photo[] = []
     const errors: string[] = []
 
+    // Step 1: upload all files to Vercel Blob (compress → upload, one by one)
     for (let i = 0; i < files.length; i++) {
-      const file = files[i]
       try {
         setStatus(`Compressing ${i + 1}/${files.length}…`)
-        const compressed = await compressImage(file)
+        const compressed = await compressImage(files[i])
         const kb = Math.round(compressed.size / 1024)
         setStatus(`Uploading ${i + 1}/${files.length} (${kb} KB)…`)
 
@@ -162,7 +162,7 @@ function UploadForm({ token, onUploaded }: { token: string; onUploaded: () => vo
         })
 
         const title = files.length > 1 ? `${meta.title} ${i + 1}` : meta.title
-        const newPhoto: Photo = {
+        newPhotos.push({
           id: `${Date.now()}-${i}`,
           src: blob.url,
           alt: `${title} — ${meta.location}`,
@@ -171,27 +171,30 @@ function UploadForm({ token, onUploaded }: { token: string; onUploaded: () => vo
           title,
           year: meta.year,
           aspectRatio: meta.aspectRatio,
-        }
-        const metaRes = await fetch('/api/admin/photos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-          body: JSON.stringify({ action: 'add', photo: newPhoto }),
         })
-        if (!metaRes.ok) {
-          const err = await metaRes.json()
-          errors.push(`Photo ${i + 1}: ${err.error}`)
-        } else {
-          uploaded++
-        }
       } catch (err) {
         errors.push(`Photo ${i + 1}: ${err instanceof Error ? err.message : 'failed'}`)
+      }
+    }
+
+    // Step 2: write all new photos to metadata in a single API call
+    if (newPhotos.length > 0) {
+      setStatus('Saving…')
+      const metaRes = await fetch('/api/admin/photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ action: 'add-multiple', photos: newPhotos }),
+      })
+      if (!metaRes.ok) {
+        const err = await metaRes.json()
+        errors.push(`Metadata: ${err.error}`)
       }
     }
 
     if (errors.length > 0) {
       setStatus(`Done with errors: ${errors.join(' · ')}`)
     } else {
-      setStatus(`Done! ${uploaded} photo${uploaded > 1 ? 's' : ''} added.`)
+      setStatus(`Done! ${newPhotos.length} photo${newPhotos.length > 1 ? 's' : ''} added.`)
       previews.forEach(URL.revokeObjectURL)
       setFiles([])
       setPreviews([])

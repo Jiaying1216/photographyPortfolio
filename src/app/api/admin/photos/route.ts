@@ -36,6 +36,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  if (action === 'add-multiple') {
+    // Prepend all new photos in one write to avoid race conditions
+    const updated = [...(reorderedPhotos as Photo[]), ...current]
+    await savePhotosToBlob(updated)
+    return NextResponse.json({ ok: true })
+  }
+
   if (action === 'delete') {
     const updated = current.filter(p => p.id !== photoId)
     await savePhotosToBlob(updated)
