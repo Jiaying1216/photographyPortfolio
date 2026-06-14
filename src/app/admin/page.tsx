@@ -9,6 +9,35 @@ import { photoSrc } from '@/lib/utils'
 const CATEGORIES = ['travel', 'portrait', 'nature', 'street', 'pet', 'food', 'family', 'graduation'] as const
 const ASPECT_RATIOS = ['3/4', '4/3', '2/3', '1/1'] as const
 
+// Resize + compress image in the browser before uploading.
+// Caps longest side at 2400px and converts to JPEG @ 85% quality.
+// A 15MB RAW export typically comes out under 600KB — 20× faster upload.
+function compressImage(file: File, maxPx = 2400, quality = 0.85): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      canvas.toBlob(
+        blob => blob
+          ? resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+          : reject(new Error('Canvas toBlob failed')),
+        'image/jpeg',
+        quality,
+      )
+    }
+    img.onerror = reject
+    img.src = objectUrl
+  })
+}
+
 // ── Password gate ──────────────────────────────────────────────────────────
 function PasswordGate({ onAuth }: { onAuth: (token: string) => void }) {
   const [pw, setPw] = useState('')
@@ -104,11 +133,16 @@ function UploadForm({ token, onUploaded }: { token: string; onUploaded: () => vo
     setUploading(true)
 
     try {
-      // 1. Upload directly from browser to Vercel Blob (no 4MB server limit)
-      setStatus('Uploading image…')
-      const ext = file.name.split('.').pop() ?? 'jpg'
-      const filename = `ying-portfolio/photos/${Date.now()}.${ext}`
-      const blob = await upload(filename, file, {
+      // 1. Compress in-browser before uploading
+      setStatus('Compressing image…')
+      const compressed = await compressImage(file)
+      const originalMB = (file.size / 1024 / 1024).toFixed(1)
+      const compressedKB = Math.round(compressed.size / 1024)
+      setStatus(`Uploading… (${originalMB} MB → ${compressedKB} KB)`)
+
+      // 2. Upload directly from browser to Vercel Blob (no size limit)
+      const filename = `ying-portfolio/photos/${Date.now()}.jpg`
+      const blob = await upload(filename, compressed, {
         access: 'private',
         handleUploadUrl: '/api/admin/upload',
         clientPayload: token, // admin token verified server-side
