@@ -7,6 +7,7 @@ export type Photo = {
   title: string
   year: number
   aspectRatio: '3/4' | '4/3' | '2/3' | '1/1'
+  filmRoll?: boolean
 }
 
 export type NavLink = {

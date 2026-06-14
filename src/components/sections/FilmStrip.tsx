@@ -1,10 +1,14 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { photos } from '@/data/photos'
+import type { Photo } from '@/types'
 import { warmGradient, photoSrc } from '@/lib/utils'
 
-export default function FilmStrip() {
+export default function FilmStrip({ photos }: { photos: Photo[] }) {
+  // Show only film-roll-flagged photos; fall back to all if none are flagged
+  const frames = photos.filter(p => p.filmRoll).length > 0
+    ? photos.filter(p => p.filmRoll)
+    : photos
   const trackRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
   const startX = useRef(0)
@@ -95,7 +99,7 @@ export default function FilmStrip() {
           cursor: isDragging.current ? 'grabbing' : 'grab',
         }}
       >
-        {[...photos, ...photos.slice(0, 4)].map((photo, i) => (
+        {[...frames, ...frames.slice(0, Math.min(4, frames.length))].map((photo, i) => (
           <div
             key={`${photo.id}-${i}`}
             className="gallery-item"

@@ -280,6 +280,7 @@ function Label({ children }: { children: React.ReactNode }) {
 // ── Photo list ─────────────────────────────────────────────────────────────
 function PhotoList({ photos, token, onDeleted }: { photos: Photo[]; token: string; onDeleted: () => void }) {
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [toggling, setToggling] = useState<string | null>(null)
 
   const deletePhoto = async (id: string) => {
     if (!confirm('Remove this photo from the portfolio?')) return
@@ -290,6 +291,17 @@ function PhotoList({ photos, token, onDeleted }: { photos: Photo[]; token: strin
       body: JSON.stringify({ action: 'delete', photoId: id }),
     })
     setDeleting(null)
+    onDeleted()
+  }
+
+  const toggleFilmRoll = async (id: string) => {
+    setToggling(id)
+    await fetch('/api/admin/photos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+      body: JSON.stringify({ action: 'toggle-film-roll', photoId: id }),
+    })
+    setToggling(null)
     onDeleted()
   }
 
@@ -328,6 +340,22 @@ function PhotoList({ photos, token, onDeleted }: { photos: Photo[]; token: strin
               {photo.location} · {photo.year} · {photo.category}
             </p>
           </div>
+          <button
+            onClick={() => toggleFilmRoll(photo.id)}
+            disabled={toggling === photo.id}
+            title={photo.filmRoll ? 'Remove from Film Roll' : 'Add to Film Roll'}
+            className="font-dm-mono"
+            style={{
+              padding: '6px 10px', fontSize: '14px', letterSpacing: 0,
+              border: '1px solid',
+              borderColor: photo.filmRoll ? '#9c5a3c' : 'rgba(201,180,154,0.4)',
+              backgroundColor: photo.filmRoll ? 'rgba(156,90,60,0.15)' : 'transparent',
+              color: photo.filmRoll ? '#9c5a3c' : '#c9b49a',
+              cursor: 'pointer',
+              opacity: toggling === photo.id ? 0.5 : 1, borderRadius: '2px',
+            }}>
+            {toggling === photo.id ? '…' : '🎞'}
+          </button>
           <button
             onClick={() => deletePhoto(photo.id)}
             disabled={deleting === photo.id}
@@ -407,9 +435,14 @@ export default function AdminPage() {
 
         {/* Existing photos */}
         <div>
-          <h2 className="font-playfair" style={{ color: '#3d2b1f', fontSize: '20px', marginBottom: '20px' }}>
-            Portfolio ({photos.length} photos)
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px', marginBottom: '20px' }}>
+            <h2 className="font-playfair" style={{ color: '#3d2b1f', fontSize: '20px' }}>
+              Portfolio ({photos.length} photos)
+            </h2>
+            <p className="font-dm-mono" style={{ color: '#c9b49a', fontSize: '10px', letterSpacing: '0.08em' }}>
+              🎞 = show in Film Roll
+            </p>
+          </div>
           {loadingPhotos
             ? <p className="font-dm-mono" style={{ color: '#c9b49a', fontSize: '11px' }}>Loading…</p>
             : <PhotoList photos={photos} token={token} onDeleted={() => loadPhotos(token)} />

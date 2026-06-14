@@ -27,7 +27,7 @@ export default async function Home() {
       <main>
         <Hero />
         <Gallery photos={photos} />
-        <FilmStrip />
+        <FilmStrip photos={photos} />
         <About />
         <Contact />
       </main>

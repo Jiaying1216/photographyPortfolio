@@ -41,5 +41,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  if (action === 'toggle-film-roll') {
+    const updated = current.map(p =>
+      p.id === photoId ? { ...p, filmRoll: !p.filmRoll } : p
+    )
+    await savePhotosToBlob(updated)
+    return NextResponse.json({ ok: true })
+  }
+
   return NextResponse.json({ error: 'Unknown action.' }, { status: 400 })
 }
