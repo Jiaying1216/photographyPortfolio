@@ -279,16 +279,45 @@ function Label({ children }: { children: React.ReactNode }) {
 
 // ── Single draggable photo row ──────────────────────────────────────────────
 function PhotoRow({
-  photo, token, onDelete, onToggle,
+  photo, token, onDelete, onToggle, onUpdate,
 }: {
   photo: Photo
   token: string
   onDelete: (id: string) => Promise<void>
   onToggle: (id: string) => Promise<void>
+  onUpdate: () => void
 }) {
   const dragControls = useDragControls()
   const [deleting, setDeleting] = useState(false)
   const [toggling, setToggling] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState({
+    title: photo.title,
+    location: photo.location,
+    category: photo.category,
+    year: photo.year,
+    aspectRatio: photo.aspectRatio,
+  })
+
+  const saveEdit = async () => {
+    setSaving(true)
+    await fetch('/api/admin/photos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+      body: JSON.stringify({ action: 'update', photo: { ...photo, ...draft } }),
+    })
+    setSaving(false)
+    setEditing(false)
+    onUpdate()
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 10px',
+    background: '#fff', border: '1px solid rgba(201,180,154,0.5)',
+    color: '#3d2b1f', fontSize: '13px', fontFamily: 'var(--font-lora-body), serif',
+    outline: 'none', borderRadius: '2px',
+  }
 
   return (
     <Reorder.Item
@@ -298,11 +327,13 @@ function PhotoRow({
       dragListener={false}
       style={{ listStyle: 'none' }}
     >
+      {/* ── Row header ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '12px',
-        padding: '12px 16px', backgroundColor: '#faf7f2',
-        border: '1px solid rgba(201,180,154,0.3)', borderRadius: '2px',
-        userSelect: 'none',
+        padding: '12px 16px', backgroundColor: editing ? '#f0ebe0' : '#faf7f2',
+        border: '1px solid', borderColor: editing ? '#c9b49a' : 'rgba(201,180,154,0.3)',
+        borderRadius: editing ? '2px 2px 0 0' : '2px',
+        userSelect: 'none', transition: 'background 0.15s',
       }}>
         {/* Drag handle */}
         <div
@@ -335,6 +366,19 @@ function PhotoRow({
           </p>
         </div>
 
+        {/* Edit toggle */}
+        <button
+          onClick={() => { setEditing(e => !e); setDraft({ title: photo.title, location: photo.location, category: photo.category, year: photo.year, aspectRatio: photo.aspectRatio }) }}
+          className="font-dm-mono"
+          style={{
+            padding: '6px 12px', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase',
+            border: '1px solid', borderColor: editing ? '#9c5a3c' : 'rgba(201,180,154,0.4)',
+            backgroundColor: editing ? 'rgba(156,90,60,0.1)' : 'transparent',
+            color: editing ? '#9c5a3c' : '#7a5c44', cursor: 'pointer', borderRadius: '2px', flexShrink: 0,
+          }}>
+          {editing ? 'Cancel' : 'Edit'}
+        </button>
+
         {/* Film roll toggle */}
         <button
           onClick={async () => { setToggling(true); await onToggle(photo.id); setToggling(false) }}
@@ -364,6 +408,62 @@ function PhotoRow({
           {deleting ? '…' : 'Remove'}
         </button>
       </div>
+
+      {/* ── Inline edit form ── */}
+      {editing && (
+        <div style={{
+          padding: '20px', backgroundColor: '#faf7f2',
+          border: '1px solid #c9b49a', borderTop: 'none', borderRadius: '0 0 2px 2px',
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <Label>Title</Label>
+              <input value={draft.title} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} style={inputStyle} />
+            </div>
+            <div>
+              <Label>Location</Label>
+              <input value={draft.location} onChange={e => setDraft(d => ({ ...d, location: e.target.value }))} style={inputStyle} />
+            </div>
+            <div>
+              <Label>Category</Label>
+              <select value={draft.category} onChange={e => setDraft(d => ({ ...d, category: e.target.value as Photo['category'] }))}
+                style={{ ...inputStyle, appearance: 'none' }}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label>Year</Label>
+              <input type="number" min="2000" max="2099" value={draft.year}
+                onChange={e => setDraft(d => ({ ...d, year: parseInt(e.target.value) }))} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <Label>Aspect Ratio</Label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {ASPECT_RATIOS.map(r => (
+                <button key={r} type="button" onClick={() => setDraft(d => ({ ...d, aspectRatio: r }))}
+                  className="font-dm-mono"
+                  style={{
+                    padding: '6px 14px', fontSize: '11px', letterSpacing: '0.1em', border: '1px solid', cursor: 'pointer',
+                    borderColor: draft.aspectRatio === r ? '#9c5a3c' : 'rgba(201,180,154,0.5)',
+                    backgroundColor: draft.aspectRatio === r ? '#9c5a3c' : 'transparent',
+                    color: draft.aspectRatio === r ? '#f5f0e8' : '#7a5c44', borderRadius: '2px',
+                  }}>
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button onClick={saveEdit} disabled={saving} className="font-dm-mono"
+            style={{
+              padding: '9px 24px', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase',
+              backgroundColor: '#3d2b1f', color: '#f5f0e8', border: 'none',
+              cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.6 : 1, borderRadius: '2px',
+            }}>
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      )}
     </Reorder.Item>
   )
 }
@@ -449,6 +549,7 @@ function PhotoList({ photos, token, onDeleted }: { photos: Photo[]; token: strin
             token={token}
             onDelete={handleDelete}
             onToggle={handleToggleFilmRoll}
+            onUpdate={onDeleted}
           />
         ))}
       </Reorder.Group>

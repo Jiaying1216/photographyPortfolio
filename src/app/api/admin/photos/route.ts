@@ -50,6 +50,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  if (action === 'update') {
+    const updated = current.map(p => p.id === photo.id ? { ...p, ...photo } : p)
+    await savePhotosToBlob(updated)
+    return NextResponse.json({ ok: true })
+  }
+
   if (action === 'reorder') {
     await savePhotosToBlob(reorderedPhotos as Photo[])
     return NextResponse.json({ ok: true })
