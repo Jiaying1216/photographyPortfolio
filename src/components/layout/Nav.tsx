@@ -70,7 +70,7 @@ export default function Nav() {
             letterSpacing: '-0.01em',
           }}
         >
-          Ying
+          Ying's Photography Portfolio
         </a>
 
         {/* Desktop links */}
