@@ -20,9 +20,8 @@ const enquiryTypes = [
 ]
 
 const socialLinks = [
-  { label: 'Instagram', href: '#' },
-  { label: 'VSCO',      href: '#' },
-  { label: 'Email',     href: '#' },
+  { label: 'Instagram', href: 'https://www.instagram.com/yings.png' },
+  { label: 'Email',     href: 'mailto:l.jiaying1216@gmail.com' },
 ]
 
 function Typewriter({ active }: { active: boolean }) {

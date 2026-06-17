@@ -70,13 +70,14 @@ export default function Nav() {
             letterSpacing: '-0.01em',
           }}
         >
-          Ying's Photography Portfolio
+          <span className="nav-name-full">Ying's Photography Portfolio</span>
+          <span className="nav-name-short">Ying</span>
         </a>
 
         {/* Desktop links */}
         <div
-          style={{ display: 'flex', gap: '36px', alignItems: 'center' }}
-          className="hidden md:flex"
+          style={{ gap: '36px', alignItems: 'center' }}
+          className="nav-desktop-links"
         >
           {links.map(link => (
             <a
@@ -114,7 +115,7 @@ export default function Nav() {
         {/* Hamburger */}
         <button
           onClick={() => setMenuOpen(v => !v)}
-          className="md:hidden"
+          className="nav-hamburger"
           aria-label="Toggle menu"
           style={{
             background: 'none',
@@ -150,10 +151,15 @@ export default function Nav() {
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <style>{`
+        .nav-desktop-links { display: none; }
+        .nav-hamburger { display: flex; }
+        .nav-name-full { display: none; }
+        .nav-name-short { display: inline; }
         @media (min-width: 768px) {
-          .hidden { display: none; }
-          .md\\:flex { display: flex !important; }
-          .md\\:hidden { display: none !important; }
+          .nav-desktop-links { display: flex !important; }
+          .nav-hamburger { display: none !important; }
+          .nav-name-short { display: none !important; }
+          .nav-name-full { display: inline !important; }
         }
         .nav-link:hover > span { width: 100% !important; }
         .nav-link:hover { color: #9c5a3c !important; }

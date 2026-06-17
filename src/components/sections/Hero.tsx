@@ -140,7 +140,8 @@ export default function Hero({ heroPhotos = [] }: { heroPhotos?: string[] }) {
           >
             <span style={{ position: 'relative', zIndex: 1 }}>View Gallery</span>
           </a>
-          <span
+          <button
+            onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
             className="font-dm-mono"
             style={{
               display: 'flex',
@@ -150,6 +151,10 @@ export default function Hero({ heroPhotos = [] }: { heroPhotos?: string[] }) {
               fontSize: '11px',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
             }}
           >
             <span style={{
@@ -164,28 +169,7 @@ export default function Hero({ heroPhotos = [] }: { heroPhotos?: string[] }) {
               color: '#c9b49a',
             }}>↓</span>
             Scroll
-          </span>
-        </motion.div>
-
-        {/* Scroll hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          style={{
-            marginTop: '60px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-          }}
-        >
-          <span
-            className="font-dm-mono"
-            style={{ color: '#c9b49a', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}
-          >
-            Scroll
-          </span>
-          <span style={{ animation: 'arrow-bob 2s ease-in-out infinite', display: 'inline-block', color: '#c9b49a' }}>↓</span>
+          </button>
         </motion.div>
       </div>
 
