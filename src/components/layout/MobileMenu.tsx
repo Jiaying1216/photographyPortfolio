@@ -43,6 +43,40 @@ export default function MobileMenu({ open, onClose }: MobileMenuProps) {
             gap: '40px',
           }}
         >
+          {/* Close button */}
+          <motion.button
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.05, duration: 0.3 }}
+            aria-label="Close menu"
+            style={{
+              position: 'absolute',
+              top: '22px',
+              right: '24px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '5px',
+            }}
+          >
+            {[0, 1].map(i => (
+              <span
+                key={i}
+                style={{
+                  display: 'block',
+                  width: '22px',
+                  height: '1.5px',
+                  backgroundColor: '#c9b49a',
+                  transform: i === 0 ? 'translateY(3.25px) rotate(45deg)' : 'translateY(-3.25px) rotate(-45deg)',
+                }}
+              />
+            ))}
+          </motion.button>
+
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
