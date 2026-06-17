@@ -3,14 +3,8 @@
 export default function Footer() {
   return (
     <footer
-      style={{
-        padding: '28px 40px',
-        borderTop: '1px solid rgba(201,180,154,0.3)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#3d2b1f',
-      }}
+      className="site-footer"
+      style={{ borderTop: '1px solid rgba(201,180,154,0.3)', backgroundColor: '#3d2b1f' }}
     >
       <span
         className="font-playfair"
@@ -42,6 +36,25 @@ export default function Footer() {
       >
         ↑ Back to top
       </a>
+
+      <style>{`
+        .site-footer {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          padding: 24px 24px;
+          text-align: center;
+        }
+        @media (min-width: 640px) {
+          .site-footer {
+            flex-direction: row;
+            justify-content: space-between;
+            padding: 28px 40px;
+            text-align: left;
+          }
+        }
+      `}</style>
     </footer>
   )
 }
