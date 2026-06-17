@@ -2,6 +2,12 @@ import { Redis } from '@upstash/redis'
 import type { Photo } from '@/types'
 
 const KV_KEY = 'ying:photos'
+const SITE_KEY = 'ying:site-photos'
+
+export type SitePhotos = {
+  hero: string[]  // up to 3 blob URLs for the hero collage
+  about: string   // blob URL for the about portrait
+}
 const BLOB_METADATA_PATHNAME = 'ying-portfolio/photos.json'
 
 export function isBlobConfigured(): boolean {
@@ -52,6 +58,24 @@ export async function savePhotosToBlob(photos: Photo[]): Promise<void> {
     addRandomSuffix: false,
     allowOverwrite: true,
   })
+}
+
+export async function getSitePhotos(): Promise<SitePhotos> {
+  try {
+    const redis = getRedis()
+    if (redis) {
+      const data = await redis.get<SitePhotos>(SITE_KEY)
+      return data ?? { hero: [], about: '' }
+    }
+    return { hero: [], about: '' }
+  } catch {
+    return { hero: [], about: '' }
+  }
+}
+
+export async function saveSitePhotos(photos: SitePhotos): Promise<void> {
+  const redis = getRedis()
+  if (redis) await redis.set(SITE_KEY, photos)
 }
 
 async function readFromBlobJSON(): Promise<Photo[]> {

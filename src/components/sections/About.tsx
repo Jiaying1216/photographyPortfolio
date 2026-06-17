@@ -1,16 +1,15 @@
 'use client'
 
 import RevealOnScroll from '@/components/ui/RevealOnScroll'
-import { warmGradient } from '@/lib/utils'
+import { warmGradient, photoSrc } from '@/lib/utils'
 
 const gear = [
-  { label: 'Camera',    value: 'Contax T2' },
-  { label: 'Film',      value: 'Kodak Portra 400' },
-  { label: 'Scanner',   value: 'Epson V600' },
-  { label: 'Location',  value: 'Singapore' },
+  { label: 'Camera',       value: 'Fujifilm X-T4' },
+  { label: 'Specialities', value: 'Lifestyle · Portrait · Travel' },
+  { label: 'Based in',     value: 'Singapore' },
 ]
 
-export default function About() {
+export default function About({ aboutPhoto = '' }: { aboutPhoto?: string }) {
   return (
     <section
       id="about"
@@ -45,7 +44,7 @@ export default function About() {
               }}
             />
 
-            {/* Photo placeholder */}
+            {/* Photo */}
             <div
               style={{
                 position: 'relative',
@@ -53,11 +52,21 @@ export default function About() {
                 background: warmGradient(4),
                 borderRadius: '2px',
                 aspectRatio: '4/5',
+                overflow: 'hidden',
                 transition: 'transform 0.4s ease',
               }}
               onMouseEnter={e => ((e.currentTarget as HTMLElement).style.transform = 'scale(1.02)')}
               onMouseLeave={e => ((e.currentTarget as HTMLElement).style.transform = 'scale(1)')}
-            />
+            >
+              {aboutPhoto && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoSrc(aboutPhoto)}
+                  alt="Ying"
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              )}
+            </div>
 
             {/* Vertical film label */}
             <div
@@ -110,31 +119,35 @@ export default function About() {
         <RevealOnScroll direction="right" delay={0.15}>
           <div style={{ paddingTop: '20px' }}>
             <p className="font-dm-mono" style={{ color: '#9c5a3c', fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '16px' }}>
-              About
+              About Ying
             </p>
             <h2 className="font-playfair" style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 400, color: '#3d2b1f', letterSpacing: '-0.02em', marginBottom: '28px', lineHeight: 1.15 }}>
-              Shooting film in a<br />
-              <em style={{ fontStyle: 'italic', color: '#9c5a3c' }}>digital world</em>
+              Finding the <em style={{ fontStyle: 'italic', color: '#9c5a3c' }}>extraordinary</em><br />
+              in the ordinary,<br />
+              one frame at a time.
             </h2>
 
             <div className="font-lora" style={{ color: '#7a5c44', fontSize: '16px', lineHeight: 1.75, display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '48px' }}>
               <p>
-                Hi, I&apos;m Ying — a film photographer based in Singapore with a love for
-                analogue textures, warm grain, and the quiet storytelling of everyday life.
+                Hi, I&apos;m Ying — a Singapore-based photographer with a passion for capturing
+                the warmth and authenticity of everyday life. My work is rooted in a genuine love
+                for visual storytelling: the kind that feels real, intimate, and quietly meaningful.
               </p>
               <p>
-                I shoot primarily on 35mm film, favouring Kodak Portra for its skin tones
-                and forgiving latitude. My work spans travel, portraiture, nature and street
-                photography across Southeast Asia and beyond.
+                My style gravitates toward warm tones, natural light, and candid moments — whether
+                that&apos;s a family gathering, a beautifully plated dish, a pet in afternoon light,
+                or a travel scene that stopped me in my tracks. I shoot across lifestyle, portrait,
+                food, travel, and street photography, always looking for the emotion within the ordinary.
               </p>
               <p>
-                Each frame is intentional. There are no second chances when every roll
-                holds just 36 exposures — and that constraint is what I love most.
+                Self-taught and driven by curiosity, I&apos;ve developed my eye through years of shooting
+                and a deep commitment to craft. Every image I make is intentional — composed with care
+                and edited to feel timeless rather than trendy.
               </p>
             </div>
 
             {/* Gear grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', backgroundColor: 'rgba(201,180,154,0.3)', border: '1px solid rgba(201,180,154,0.3)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1px', backgroundColor: 'rgba(201,180,154,0.3)', border: '1px solid rgba(201,180,154,0.3)' }}>
               {gear.map(item => (
                 <div
                   key={item.label}

@@ -16,13 +16,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       request: req,
       // Called before Vercel generates an upload token for the client.
       // clientPayload is the admin token we pass from the browser.
-      onBeforeGenerateToken: async (_pathname, clientPayload) => {
+      onBeforeGenerateToken: async (pathname, clientPayload) => {
         if (!isValidToken(clientPayload ?? null)) {
           throw new Error('Unauthorized')
         }
+        const isSite = pathname.startsWith('ying-portfolio/site/')
         return {
           access: 'private' as const,
           addRandomSuffix: false,
+          ...(isSite && { allowOverwrite: true }),
         }
       },
       onUploadCompleted: async ({ blob }) => {

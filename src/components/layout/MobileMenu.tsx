@@ -43,6 +43,16 @@ export default function MobileMenu({ open, onClose }: MobileMenuProps) {
             gap: '40px',
           }}
         >
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.05, duration: 0.4 }}
+            className="font-dm-mono"
+            style={{ color: '#c9b49a', fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '-20px' }}
+          >
+            Ying · Singapore · Fujifilm X-T4
+          </motion.p>
+
           {links.map((link, i) => (
             <motion.button
               key={link.label}

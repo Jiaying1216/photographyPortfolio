@@ -209,13 +209,14 @@ function Lightbox({
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.3 }}
         onClick={e => e.stopPropagation()}
-        style={{ textAlign: 'center', maxWidth: '80vw', maxHeight: '75vh' }}
+        style={{ textAlign: 'center', width: 'min(90vw, 960px)' }}
       >
         <div
           style={{
             background: warmGradient(parseInt(photo.id) - 1),
-            width: 'min(600px, 80vw)',
-            height: 'min(400px, 60vh)',
+            width: '100%',
+            aspectRatio: photo.aspectRatio,
+            maxHeight: '74vh',
             margin: '0 auto',
             borderRadius: '2px',
             position: 'relative',

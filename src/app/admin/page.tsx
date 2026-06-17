@@ -4,7 +4,8 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Reorder, useDragControls } from 'framer-motion'
 import { upload } from '@vercel/blob/client'
 import type { Photo } from '@/types'
-import { photoSrc } from '@/lib/utils'
+import type { SitePhotos } from '@/lib/blob-photos'
+import { photoSrc, warmGradient } from '@/lib/utils'
 
 const CATEGORIES = ['travel', 'portrait', 'nature', 'street', 'pet', 'food', 'family', 'graduation'] as const
 const ASPECT_RATIOS = ['3/4', '4/3', '2/3', '1/1'] as const
@@ -97,6 +98,128 @@ function PasswordGate({ onAuth }: { onAuth: (token: string) => void }) {
           </button>
         </form>
       </div>
+    </div>
+  )
+}
+
+// ── Site Photos (hero collage + about portrait) ────────────────────────────
+const SITE_SLOTS = [
+  { key: 'hero-0', label: 'Hero Left (tall)', aspect: '2/3' },
+  { key: 'hero-1', label: 'Hero Top Right',   aspect: '4/3' },
+  { key: 'hero-2', label: 'Hero Bottom Right', aspect: '4/3' },
+  { key: 'about',  label: 'About Portrait',    aspect: '4/5' },
+] as const
+
+type SiteSlotKey = typeof SITE_SLOTS[number]['key']
+
+function SitePhotosSection({ token }: { token: string }) {
+  const [sitePhotos, setSitePhotos] = useState<SitePhotos>({ hero: [], about: '' })
+  const [uploading, setUploading] = useState<SiteSlotKey | null>(null)
+  const [status, setStatus] = useState('')
+  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  useEffect(() => {
+    fetch('/api/admin/site-photos', { headers: { 'x-admin-token': token } })
+      .then(r => r.json())
+      .then(data => setSitePhotos(data))
+      .catch(() => {})
+  }, [token])
+
+  const getSlotUrl = (key: SiteSlotKey) =>
+    key === 'about' ? sitePhotos.about : (sitePhotos.hero[parseInt(key.split('-')[1])] ?? '')
+
+  const handleFile = async (key: SiteSlotKey, file: File) => {
+    setUploading(key)
+    setStatus('Compressing…')
+    try {
+      const compressed = await compressImage(file)
+      setStatus('Uploading…')
+      const blob = await upload(`ying-portfolio/site/${key}.jpg`, compressed, {
+        access: 'private',
+        handleUploadUrl: '/api/admin/upload',
+        clientPayload: token,
+      })
+      const updated: SitePhotos =
+        key === 'about'
+          ? { ...sitePhotos, about: blob.url }
+          : { ...sitePhotos, hero: Object.assign([...sitePhotos.hero], { [parseInt(key.split('-')[1])]: blob.url }) }
+
+      setStatus('Saving…')
+      await fetch('/api/admin/site-photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ sitePhotos: updated }),
+      })
+      setSitePhotos(updated)
+      setStatus('Saved!')
+    } catch (err) {
+      setStatus(`Error: ${err instanceof Error ? err.message : 'failed'}`)
+    }
+    setUploading(null)
+  }
+
+  return (
+    <div style={{ backgroundColor: '#faf7f2', border: '1px solid rgba(201,180,154,0.4)', borderRadius: '4px', padding: '32px', marginBottom: '40px' }}>
+      <h2 className="font-playfair" style={{ color: '#3d2b1f', fontSize: '20px', marginBottom: '8px' }}>
+        Site Photos
+      </h2>
+      <p className="font-dm-mono" style={{ color: '#c9b49a', fontSize: '10px', letterSpacing: '0.1em', marginBottom: '24px' }}>
+        Hero collage (3 photos) · About portrait
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        {SITE_SLOTS.map(slot => {
+          const url = getSlotUrl(slot.key)
+          const busy = uploading === slot.key
+          return (
+            <div key={slot.key}>
+              <p className="font-dm-mono" style={{ color: '#9c5a3c', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                {slot.label}
+              </p>
+              <div
+                style={{
+                  position: 'relative',
+                  aspectRatio: slot.aspect,
+                  background: warmGradient(SITE_SLOTS.findIndex(s => s.key === slot.key)),
+                  borderRadius: '2px',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                }}
+                onClick={() => fileRefs.current[slot.key]?.click()}
+              >
+                {url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photoSrc(url)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                )}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: busy ? 'rgba(61,43,31,0.6)' : 'rgba(61,43,31,0)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background 0.2s',
+                }}
+                  onMouseEnter={e => { if (!busy) (e.currentTarget as HTMLElement).style.background = 'rgba(61,43,31,0.45)' }}
+                  onMouseLeave={e => { if (!busy) (e.currentTarget as HTMLElement).style.background = 'rgba(61,43,31,0)' }}
+                >
+                  <span className="font-dm-mono" style={{ color: '#f5f0e8', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                    {busy ? status : url ? 'Change' : '+ Upload'}
+                  </span>
+                </div>
+                <input
+                  ref={el => { fileRefs.current[slot.key] = el }}
+                  type="file" accept="image/*" style={{ display: 'none' }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(slot.key, f); e.target.value = '' }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {status && !uploading && (
+        <p className="font-dm-mono" style={{ color: '#8a9a7e', fontSize: '11px', marginTop: '12px', letterSpacing: '0.06em' }}>
+          {status}
+        </p>
+      )}
     </div>
   )
 }
@@ -679,6 +802,9 @@ export default function AdminPage() {
             Sign out
           </button>
         </div>
+
+        {/* Site Photos */}
+        <SitePhotosSection token={token} />
 
         {/* Upload form */}
         <div style={{ backgroundColor: '#faf7f2', border: '1px solid rgba(201,180,154,0.4)', borderRadius: '4px', padding: '32px', marginBottom: '40px' }}>

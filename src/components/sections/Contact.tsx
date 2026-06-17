@@ -4,24 +4,25 @@ import { useState, useEffect, useRef } from 'react'
 import RevealOnScroll from '@/components/ui/RevealOnScroll'
 
 const phrases = [
-  'a portrait session in Singapore.',
-  'travel photography for your next trip.',
-  'editorial work and collaborations.',
-  'prints and licensing enquiries.',
+  'Open to collaborations and creative projects.',
+  'Available for portrait and lifestyle shoots.',
+  "Let's create something meaningful together.",
+  "Brand work, events, travel — let's talk ✦",
 ]
 
 const enquiryTypes = [
   'Portrait Session',
-  'Travel Photography',
-  'Editorial / Commercial',
-  'Print & Licensing',
+  'Brand / Commercial',
+  'Event Coverage',
+  'Travel / Lifestyle',
+  'Collaboration',
   'General Enquiry',
 ]
 
 const socialLinks = [
-  { label: 'Instagram',  href: '#' },
-  { label: 'VSCO',       href: '#' },
-  { label: 'Email',      href: 'mailto:hello@ying.photo' },
+  { label: 'Instagram', href: '#' },
+  { label: 'VSCO',      href: '#' },
+  { label: 'Email',     href: '#' },
 ]
 
 function Typewriter({ active }: { active: boolean }) {
@@ -153,17 +154,17 @@ export default function Contact() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '20px' }}>
             <span style={{ flex: 1, height: '1px', backgroundColor: 'rgba(201,180,154,0.5)', maxWidth: 80 }} />
             <span className="font-dm-mono" style={{ color: '#9c5a3c', fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase' }}>
-              Get In Touch
+              Say hello
             </span>
             <span style={{ flex: 1, height: '1px', backgroundColor: 'rgba(201,180,154,0.5)', maxWidth: 80 }} />
           </div>
 
           <h2 className="font-playfair" style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 400, color: '#3d2b1f', letterSpacing: '-0.02em', marginBottom: '16px' }}>
-            Let&apos;s create something
+            Let&apos;s work on something <em style={{ fontStyle: 'italic', color: '#9c5a3c' }}>together.</em>
           </h2>
 
           <p className="font-lora" style={{ color: '#7a5c44', fontSize: '16px', marginBottom: '48px', lineHeight: 1.7 }}>
-            Available for <Typewriter active={inView} />
+            <Typewriter active={inView} />
           </p>
         </RevealOnScroll>
 
@@ -180,6 +181,7 @@ export default function Contact() {
                     type={field === 'email' ? 'email' : 'text'}
                     name={field}
                     required
+                    placeholder={field === 'name' ? 'Your name' : 'your@email.com'}
                     value={form[field]}
                     onChange={handleChange}
                     style={inputStyle}
@@ -227,7 +229,8 @@ export default function Contact() {
                 required
                 value={form.message}
                 onChange={handleChange}
-                style={{ ...inputStyle, resize: 'none' }}
+                placeholder="Tell me about your project or idea..."
+              style={{ ...inputStyle, resize: 'none' }}
                 onFocus={e => {
                   e.target.style.borderBottomColor = '#9c5a3c'
                   e.target.style.boxShadow = '0 2px 0 rgba(156,90,60,0.2)'
@@ -257,7 +260,7 @@ export default function Contact() {
                   transition: 'color 0.3s',
                 }}
               >
-                <span style={{ position: 'relative', zIndex: 1 }}>Send Message</span>
+                <span style={{ position: 'relative', zIndex: 1 }}>Send Message →</span>
               </button>
             </div>
           </form>

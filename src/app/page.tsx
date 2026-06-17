@@ -7,7 +7,7 @@ import FilmStrip from '@/components/sections/FilmStrip'
 import About from '@/components/sections/About'
 import Contact from '@/components/sections/Contact'
 import { photos as staticPhotos } from '@/data/photos'
-import { isBlobConfigured, getPhotosFromBlob } from '@/lib/blob-photos'
+import { isBlobConfigured, getPhotosFromBlob, getSitePhotos } from '@/lib/blob-photos'
 
 async function getPhotos() {
   if (isBlobConfigured()) {
@@ -18,17 +18,20 @@ async function getPhotos() {
 }
 
 export default async function Home() {
-  const photos = await getPhotos()
+  const [photos, sitePhotos] = await Promise.all([
+    getPhotos(),
+    isBlobConfigured() ? getSitePhotos() : Promise.resolve({ hero: [], about: '' }),
+  ])
 
   return (
     <>
       <IntroLoader />
       <Nav />
       <main>
-        <Hero />
+        <Hero heroPhotos={sitePhotos.hero} />
         <Gallery photos={photos} />
         <FilmStrip photos={photos} />
-        <About />
+        <About aboutPhoto={sitePhotos.about} />
         <Contact />
       </main>
       <Footer />

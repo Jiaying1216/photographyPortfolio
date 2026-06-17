@@ -16,14 +16,14 @@ export default function Footer() {
         className="font-playfair"
         style={{ color: '#c9b49a', fontStyle: 'italic', fontSize: '15px' }}
       >
-        Ying
+        Ying — Photography
       </span>
 
       <span
         className="font-dm-mono"
         style={{ color: '#7a5c44', fontSize: '11px', letterSpacing: '0.08em' }}
       >
-        © {new Date().getFullYear()} · All rights reserved
+        © 2025 · Shot with love in SG
       </span>
 
       <a

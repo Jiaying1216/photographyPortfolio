@@ -2,23 +2,23 @@
 
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { warmGradient } from '@/lib/utils'
+import { warmGradient, photoSrc } from '@/lib/utils'
 
 const words = ['Analogue', 'stillness', 'grain', 'light']
 
-const heroPhotos = [
+const heroSlots = [
   { gradient: warmGradient(0), span: true },
   { gradient: warmGradient(2) },
   { gradient: warmGradient(1) },
 ]
 
-export default function Hero() {
+export default function Hero({ heroPhotos = [] }: { heroPhotos?: string[] }) {
   const ref = useRef<HTMLElement>(null)
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
   const y = useTransform(scrollYProgress, [0, 1], [0, -80])
   const filmCount = useTransform(scrollYProgress, [0, 1], [1, 36])
 
-  const headline = ['Capturing', 'the world', 'one frame', 'at a time.']
+  const headline = ['Telling stories', 'through light,', 'warmth &', 'detail.']
 
   return (
     <section
@@ -73,7 +73,7 @@ export default function Hero() {
             marginBottom: '28px',
           }}
         >
-          Singapore · Est. 2019
+          Photography Rooted in Everyday Beauty
         </motion.p>
 
         <h1
@@ -112,8 +112,7 @@ export default function Hero() {
           className="font-lora"
           style={{ color: '#7a5c44', fontSize: '16px', lineHeight: 1.7, marginBottom: '40px', maxWidth: 380 }}
         >
-          Film photographer based in Singapore. Drawn to quiet moments, warm light,
-          and the texture of everyday life.
+          Singapore-based photographer specialising in lifestyle, portrait, travel, and the quiet beauty of everyday moments — shot on Fujifilm.
         </motion.p>
 
         <motion.div
@@ -139,23 +138,33 @@ export default function Hero() {
               transition: 'color 0.3s',
             }}
           >
-            <span style={{ position: 'relative', zIndex: 1 }}>View Work</span>
+            <span style={{ position: 'relative', zIndex: 1 }}>View Gallery</span>
           </a>
-          <a
-            href="#contact"
+          <span
             className="font-dm-mono"
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
               color: '#9c5a3c',
-              textDecoration: 'none',
               fontSize: '11px',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
-              borderBottom: '1px solid #c9b49a',
-              paddingBottom: '2px',
             }}
           >
-            Get in touch →
-          </a>
+            <span style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              border: '1px solid #c9b49a',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '13px',
+              color: '#c9b49a',
+            }}>↓</span>
+            Scroll
+          </span>
         </motion.div>
 
         {/* Scroll hint */}
@@ -185,19 +194,30 @@ export default function Hero() {
         style={{ y }}
         className="hero-collage"
       >
-        {heroPhotos.map((photo, i) => (
+        {heroSlots.map((slot, i) => (
           <div
             key={i}
             className="gallery-item"
             style={{
-              background: photo.gradient,
+              background: slot.gradient,
               borderRadius: '2px',
-              gridRow: photo.span ? 'span 2' : undefined,
+              gridRow: slot.span ? 'span 2' : undefined,
               transition: 'transform 0.4s ease',
+              position: 'relative',
+              overflow: 'hidden',
             }}
             onMouseEnter={e => ((e.currentTarget as HTMLElement).style.transform = 'scale(1.02)')}
             onMouseLeave={e => ((e.currentTarget as HTMLElement).style.transform = 'scale(1)')}
-          />
+          >
+            {heroPhotos[i] && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={photoSrc(heroPhotos[i])}
+                alt=""
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            )}
+          </div>
         ))}
 
         {/* Film counter */}
