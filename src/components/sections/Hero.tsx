@@ -178,31 +178,40 @@ export default function Hero({ heroPhotos = [] }: { heroPhotos?: string[] }) {
         style={{ y }}
         className="hero-collage"
       >
-        {heroSlots.map((slot, i) => (
-          <div
-            key={i}
-            className="gallery-item"
-            style={{
-              background: slot.gradient,
-              borderRadius: '2px',
-              gridRow: slot.span ? 'span 2' : undefined,
-              transition: 'transform 0.4s ease',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.transform = 'scale(1.02)')}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.transform = 'scale(1)')}
-          >
-            {heroPhotos[i] && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={photoSrc(heroPhotos[i])}
-                alt=""
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            )}
-          </div>
-        ))}
+        {heroSlots.map((slot, i) => {
+          const slideFrom = [
+            { x: -50, y: 0 },
+            { x: 40,  y: -20 },
+            { x: 40,  y: 20 },
+          ][i]
+          return (
+            <motion.div
+              key={i}
+              className="gallery-item"
+              initial={{ opacity: 0, ...slideFrom }}
+              whileInView={{ opacity: 1, x: 0, y: 0 }}
+              whileHover={{ scale: 1.03 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.75, delay: i * 0.13, ease: [0.25, 0.1, 0.25, 1] }}
+              style={{
+                background: slot.gradient,
+                borderRadius: '2px',
+                gridRow: slot.span ? 'span 2' : undefined,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {heroPhotos[i] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoSrc(heroPhotos[i])}
+                  alt=""
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              )}
+            </motion.div>
+          )
+        })}
 
         {/* Film counter */}
         <motion.div
@@ -233,7 +242,7 @@ export default function Hero({ heroPhotos = [] }: { heroPhotos?: string[] }) {
           .hero-collage {
             display: grid !important;
             grid-template-columns: 1fr 1fr;
-            grid-template-rows: repeat(2, 200px);
+            grid-template-rows: repeat(2, clamp(220px, 22vw, 300px));
             gap: 12px;
             position: relative;
           }
